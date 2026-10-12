@@ -70,13 +70,22 @@ function initVR(box) {
   }, { threshold: 0.4 }).observe(box);
 }
 document.querySelectorAll('.vr').forEach(initVR);
+/* If files were uploaded into img/ and video/ folders instead of one flat folder, try those paths too */
+function withFallback(vid, poster) {
+  vid.addEventListener('error', () => {
+    if (!vid.dataset.retry) { vid.dataset.retry = '1'; vid.src = 'video/' + vid.getAttribute('src'); }
+  });
+  if (poster) { const t = new Image(); t.onerror = () => { vid.poster = 'img/' + poster; }; t.src = poster; }
+}
+document.querySelectorAll('.vr video').forEach(v => withFallback(v, v.getAttribute('poster')));
+
 
 /* ---------- Room buttons: show pictures and videos for that room ---------- */
 const VID = {
-  walkthrough: { src: 'video/walkthrough.mp4', poster: 'img/vid-walkthrough.jpg', title: 'Full home walkthrough' },
-  bedroom:     { src: 'video/bedroom.mp4',     poster: 'img/vid-bedroom.jpg',     title: 'Master bedroom', land: true },
-  dining:      { src: 'video/dining.mp4',      poster: 'img/vid-dining.jpg',      title: 'Dining and crockery unit' },
-  kitchen:     { src: 'video/kitchen.mp4',     poster: 'img/vid-kitchen.jpg',     title: 'Modular kitchen' }
+  walkthrough: { src: 'walkthrough.mp4', poster: 'vid-walkthrough.jpg', title: 'Full home walkthrough' },
+  bedroom:     { src: 'bedroom.mp4',     poster: 'vid-bedroom.jpg',     title: 'Master bedroom', land: true },
+  dining:      { src: 'dining.mp4',      poster: 'vid-dining.jpg',      title: 'Dining and crockery unit' },
+  kitchen:     { src: 'kitchen.mp4',     poster: 'vid-kitchen.jpg',     title: 'Modular kitchen' }
 };
 const CATS = {
   bedroom:   { title: 'Bedroom',          videos: ['bedroom'], pics: ['bedroom.jpg', 'bed-6.jpg', 'bed-2.jpg', 'bed-10.jpg', 'walk-76.jpg'] },
@@ -110,6 +119,7 @@ function openCat(key) {
     f.innerHTML = '<video muted loop playsinline preload="metadata"></video><figcaption><strong></strong></figcaption>' +
       '<div class="vr-hint"><b>&#8596;</b> Drag to look around</div><button type="button" class="vr-play" aria-label="Pause">&#10074;&#10074;</button>';
     const vid = f.querySelector('video'); vid.poster = d.poster; vid.src = d.src;
+    withFallback(vid, d.poster);
     f.querySelector('strong').textContent = d.title;
     showVideos.appendChild(f); initVR(f);
   });
@@ -118,8 +128,10 @@ function openCat(key) {
   c.pics.forEach(p => {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'pic';
-    b.innerHTML = '<img loading="lazy" alt="' + c.title + '" src="img/' + p + '">';
-    b.addEventListener('click', () => openLightbox('img/' + p, c.title));
+    b.innerHTML = '<img loading="lazy" alt="' + c.title + '" src="' + p + '">';
+    const im = b.querySelector('img');
+    im.onerror = () => { if (!im.dataset.retry) { im.dataset.retry = '1'; im.src = 'img/' + p; } };
+    b.addEventListener('click', () => openLightbox('' + p, c.title));
     showGrid.appendChild(b);
   });
   if (!c.pics.length) {
